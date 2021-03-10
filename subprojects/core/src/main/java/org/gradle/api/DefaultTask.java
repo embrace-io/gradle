@@ -31,10 +31,12 @@ import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.TaskDependency;
 import org.gradle.api.tasks.TaskDestroyables;
 import org.gradle.api.tasks.TaskLocalState;
+import org.gradle.embracelogger.EmbraceLogger;
 import org.gradle.internal.extensibility.NoConventionMapping;
 
 import java.io.File;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -119,6 +121,11 @@ public class DefaultTask extends org.gradle.api.internal.AbstractTask implements
 
     @Override
     public Task dependsOn(Object... paths) {
+        List<String> objs = new ArrayList<>();
+        for (Object o : paths) {
+            objs.add(o.toString());
+        }
+        EmbraceLogger.logWarning("Task: " + getName() + " let's see if this shows up depends on task " + String.join(", ", objs));
         return super.dependsOn(paths);
     }
 
@@ -224,6 +231,7 @@ public class DefaultTask extends org.gradle.api.internal.AbstractTask implements
 
     @Override
     public Task finalizedBy(Object... paths) {
+        EmbraceLogger.logWarning("Task: " + getName() + " finalized by " + paths);
         return super.finalizedBy(paths);
     }
 

@@ -15,6 +15,9 @@
  */
 package org.gradle.api.internal.artifacts.ivyservice.moduleconverter.dependencies;
 
+import java.util.Arrays;
+import java.util.ConcurrentModificationException;
+
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.DependencyConstraint;
 import org.gradle.api.artifacts.ExcludeRule;
@@ -25,6 +28,8 @@ import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal;
 import org.gradle.api.internal.artifacts.dependencies.SelfResolvingDependencyInternal;
 import org.gradle.api.internal.attributes.AttributeContainerInternal;
 import org.gradle.api.internal.file.FileCollectionInternal;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 import org.gradle.internal.component.local.model.BuildableLocalConfigurationMetadata;
 import org.gradle.internal.component.local.model.LocalFileDependencyMetadata;
 
@@ -33,6 +38,8 @@ import javax.annotation.Nullable;
 public class DefaultLocalConfigurationMetadataBuilder implements LocalConfigurationMetadataBuilder {
     private final DependencyDescriptorFactory dependencyDescriptorFactory;
     private final ExcludeRuleConverter excludeRuleConverter;
+
+    private final static Logger LOGGER = Logging.getLogger(DefaultLocalConfigurationMetadataBuilder.class);
 
     public DefaultLocalConfigurationMetadataBuilder(DependencyDescriptorFactory dependencyDescriptorFactory,
                                                     ExcludeRuleConverter excludeRuleConverter) {
@@ -52,16 +59,24 @@ public class DefaultLocalConfigurationMetadataBuilder implements LocalConfigurat
 
     private void addDependencies(BuildableLocalConfigurationMetadata configurationMetadata, ConfigurationInternal configuration) {
         AttributeContainerInternal attributes = configuration.getAttributes();
-        for (Dependency dependency : configuration.getDependencies()) {
-            if (dependency instanceof ModuleDependency) {
-                ModuleDependency moduleDependency = (ModuleDependency) dependency;
-                configurationMetadata.addDependency(dependencyDescriptorFactory.createDependencyDescriptor(configurationMetadata.getComponentId(), configuration.getName(), attributes, moduleDependency));
-            } else if (dependency instanceof FileCollectionDependency) {
-                final FileCollectionDependency fileDependency = (FileCollectionDependency) dependency;
-                configurationMetadata.addFiles(new DefaultLocalFileDependencyMetadata(fileDependency));
-            } else {
-                throw new IllegalArgumentException("Cannot convert dependency " + dependency + " to local component dependency metadata.");
+        try {
+            for (Dependency dependency : configuration.getDependencies()) {
+                if (dependency instanceof ModuleDependency) {
+                    ModuleDependency moduleDependency = (ModuleDependency) dependency;
+                    configurationMetadata.addDependency(dependencyDescriptorFactory.createDependencyDescriptor(configurationMetadata.getComponentId(), configuration.getName(), attributes, moduleDependency));
+                } else if (dependency instanceof FileCollectionDependency) {
+                    final FileCollectionDependency fileDependency = (FileCollectionDependency) dependency;
+                    configurationMetadata.addFiles(new DefaultLocalFileDependencyMetadata(fileDependency));
+                } else {
+                    throw new IllegalArgumentException("Cannot convert dependency " + dependency + " to local component dependency metadata.");
+                }
             }
+        } catch (ConcurrentModificationException e) {
+            LOGGER.error("*** Concurrent error happened ***");
+            LOGGER.error("Config display name: " + configuration.getDisplayName());
+            LOGGER.error("Config dependencies: " + Arrays.toString(configuration.getDependencies().toArray()));
+            LOGGER.error("Config description: " + configuration.getDescription());
+            throw e;
         }
     }
 

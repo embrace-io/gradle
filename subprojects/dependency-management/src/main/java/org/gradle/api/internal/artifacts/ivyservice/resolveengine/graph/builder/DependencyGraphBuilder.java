@@ -184,7 +184,7 @@ public class DependencyGraphBuilder {
         while (resolveState.peek() != null || moduleConflictHandler.hasConflicts() || capabilitiesConflictHandler.hasConflicts()) {
             if (resolveState.peek() != null) {
                 final NodeState node = resolveState.pop();
-                LOGGER.debug("Visiting configuration {}.", node);
+                LOGGER.warn("Visiting configuration {}.", node);
 
                 // Register capabilities for this node
                 registerCapabilities(resolveState, node);

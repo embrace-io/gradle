@@ -33,6 +33,8 @@ import org.gradle.api.internal.provider.Collectors.ElementsFromCollectionProvide
 import org.gradle.api.internal.provider.Collectors.SingleElement;
 import org.gradle.api.internal.provider.Collectors.TypedCollector;
 import org.gradle.api.internal.provider.ProviderInternal;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 import org.gradle.api.specs.Spec;
 import org.gradle.internal.Cast;
 
@@ -58,6 +60,8 @@ abstract public class AbstractIterationOrderRetainingElementSource<T> implements
     List<Element<T>> getInserted() {
         return inserted;
     }
+
+    private final static Logger LOGGER = Logging.getLogger(AbstractIterationOrderRetainingElementSource.class);
 
     @Override
     public boolean isEmpty() {
@@ -282,6 +286,22 @@ abstract public class AbstractIterationOrderRetainingElementSource<T> implements
 
         final void checkForComodification() {
             if (modCount != expectedModCount) {
+                LOGGER.error(String.format("Expected %d mods but got %d", expectedModCount, modCount));
+                try {
+                    if (!backingList.isEmpty()) {
+                        List<String> elements = new ArrayList<>();
+                        for (Element<T> element : backingList) {
+                            if (element.cache.isEmpty()) {
+                                continue;
+                            }
+                            elements.add(element.cache.get(0).toString());
+                        }
+                        LOGGER.error("list for failed ElementSource: " + String.join(", ", elements));
+                    }
+                } catch(Exception e) {
+                    LOGGER.error("Could not create string from failed ElementSource");
+                }
+
                 throw new ConcurrentModificationException();
             }
         }
